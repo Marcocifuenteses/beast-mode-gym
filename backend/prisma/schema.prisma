@@ -1,0 +1,205 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["views"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RolUsuario {
+  ADMIN
+  ENTRENADOR
+  SUSCRIPTOR
+
+  @@map("rol_usuario")
+}
+
+enum EstadoSuscripcion {
+  ACTIVA
+  VENCIDA
+  CANCELADA
+
+  @@map("estado_suscripcion")
+}
+
+enum MetodoPago {
+  EFECTIVO
+  TRANSFERENCIA
+
+  @@map("metodo_pago")
+}
+
+enum TipoRecordatorio {
+  POR_VENCER
+  VENCIDA
+
+  @@map("tipo_recordatorio")
+}
+
+model Usuario {
+  id                    BigInt         @id @default(autoincrement())
+  nombre                String         @db.VarChar(60)
+  apellido              String         @db.VarChar(60)
+  email                 String         @unique(map: "uq_usuarios_email") @db.VarChar(120)
+  passwordHash          String         @map("password_hash") @db.VarChar(255)
+  rol                   RolUsuario     @default(SUSCRIPTOR)
+  activo                Boolean        @default(true)
+  creadoEn              DateTime       @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn         DateTime       @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+  cliente               Cliente?
+  recordatoriosEnviados Recordatorio[]
+  refreshTokens         RefreshToken[]
+
+  @@index([activo], map: "idx_usuarios_activo")
+  @@map("usuarios")
+}
+
+model Cliente {
+  id              BigInt         @id @default(autoincrement())
+  usuarioId       BigInt         @unique(map: "uq_clientes_usuario") @map("usuario_id")
+  usuario         Usuario        @relation(fields: [usuarioId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_clientes_usuario")
+  codigo          String         @unique(map: "uq_clientes_codigo") @db.VarChar(20)
+  dpi             String?        @unique(map: "uq_clientes_dpi") @db.VarChar(13)
+  telefono        String?        @db.VarChar(20)
+  fechaNacimiento DateTime?      @map("fecha_nacimiento") @db.Date
+  activo          Boolean        @default(true)
+  creadoEn        DateTime       @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn   DateTime       @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+  suscripciones   Suscripcion[]
+  asistencias     Asistencia[]
+  recordatorios   Recordatorio[]
+
+  @@index([activo], map: "idx_clientes_activo")
+  @@map("clientes")
+}
+
+model Plan {
+  id            BigInt        @id @default(autoincrement())
+  nombre        String        @unique(map: "uq_planes_nombre") @db.VarChar(60)
+  descripcion   String?
+  precio        Decimal       @db.Decimal(10, 2)
+  duracionDias  Int           @map("duracion_dias")
+  activo        Boolean       @default(true)
+  creadoEn      DateTime      @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime      @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+  suscripciones Suscripcion[]
+
+  @@map("planes")
+}
+
+/// La DB además impone: UNIQUE (cliente_id) WHERE estado = 'ACTIVA' (uq_suscripcion_activa_por_cliente).
+/// Prisma no puede expresar índices únicos parciales, así que a propósito NO se declara @@unique aquí:
+/// la restricción sigue viva en Postgres, Prisma simplemente no la modela.
+model Suscripcion {
+  id            BigInt            @id @default(autoincrement())
+  clienteId     BigInt            @map("cliente_id")
+  cliente       Cliente           @relation(fields: [clienteId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_suscripciones_cliente")
+  planId        BigInt            @map("plan_id")
+  plan          Plan              @relation(fields: [planId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_suscripciones_plan")
+  fechaInicio   DateTime          @default(dbgenerated("CURRENT_DATE")) @map("fecha_inicio") @db.Date
+  fechaFin      DateTime          @map("fecha_fin") @db.Date
+  precioPagado  Decimal           @map("precio_pagado") @db.Decimal(10, 2)
+  estado        EstadoSuscripcion @default(ACTIVA)
+  creadoEn      DateTime          @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime          @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+  pagos         Pago[]
+  asistencias   Asistencia[]
+  recordatorios Recordatorio[]
+
+  @@index([clienteId], map: "idx_suscripciones_cliente")
+  @@index([estado], map: "idx_suscripciones_estado")
+  @@index([fechaFin], map: "idx_suscripciones_fecha_fin")
+  @@map("suscripciones")
+}
+
+model Pago {
+  id            BigInt      @id @default(autoincrement())
+  suscripcionId BigInt      @map("suscripcion_id")
+  suscripcion   Suscripcion @relation(fields: [suscripcionId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_pagos_suscripcion")
+  monto         Decimal     @db.Decimal(10, 2)
+  metodo        MetodoPago  @default(EFECTIVO)
+  fechaPago     DateTime    @default(now()) @map("fecha_pago") @db.Timestamptz(6)
+  referencia    String?     @db.VarChar(80)
+  creadoEn      DateTime    @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  @@index([fechaPago], map: "idx_pagos_fecha")
+  @@index([suscripcionId], map: "idx_pagos_suscripcion")
+  @@map("pagos")
+}
+
+/// La DB además impone: UNIQUE (cliente_id) WHERE salida IS NULL (uq_asistencia_abierta_por_cliente).
+/// No declarado como @@unique por la misma razón que en Suscripcion (Prisma no soporta índices parciales).
+model Asistencia {
+  id            BigInt      @id @default(autoincrement())
+  clienteId     BigInt      @map("cliente_id")
+  cliente       Cliente     @relation(fields: [clienteId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_asistencias_cliente")
+  suscripcionId BigInt      @map("suscripcion_id")
+  suscripcion   Suscripcion @relation(fields: [suscripcionId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_asistencias_suscripcion")
+  entrada       DateTime    @default(now()) @db.Timestamptz(6)
+  salida        DateTime?   @db.Timestamptz(6)
+
+  @@index([clienteId], map: "idx_asistencias_cliente")
+  @@index([entrada], map: "idx_asistencias_entrada")
+  @@map("asistencias")
+}
+
+/// La DB además impone: UNIQUE (suscripcion_id, tipo) WHERE enviado_por IS NULL (uq_recordatorio_automatico).
+/// No declarado como @@unique por la misma razón que en Suscripcion/Asistencia.
+model Recordatorio {
+  id            BigInt           @id @default(autoincrement())
+  clienteId     BigInt           @map("cliente_id")
+  cliente       Cliente          @relation(fields: [clienteId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_recordatorios_cliente")
+  suscripcionId BigInt           @map("suscripcion_id")
+  suscripcion   Suscripcion      @relation(fields: [suscripcionId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_recordatorios_suscripcion")
+  tipo          TipoRecordatorio
+  fechaEnvio    DateTime         @default(now()) @map("fecha_envio") @db.Timestamptz(6)
+  enviadoPor    BigInt?          @map("enviado_por")
+  usuario       Usuario?         @relation(fields: [enviadoPor], references: [id], onDelete: SetNull, onUpdate: NoAction, map: "fk_recordatorios_usuario")
+
+  @@index([fechaEnvio], map: "idx_recordatorios_fecha")
+  @@index([suscripcionId], map: "idx_recordatorios_suscripcion")
+  @@map("recordatorios")
+}
+
+/// Tabla nueva, gestionada 100% por Prisma (no viene del script SQL original).
+/// id es UUID (jti del refresh JWT) en vez de bigint secuencial: un ID adivinable
+/// sería un problema de seguridad para tokens de sesión.
+model RefreshToken {
+  id                String    @id @default(uuid())
+  usuarioId         BigInt    @map("usuario_id")
+  usuario           Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  expiresAt         DateTime  @map("expires_at")
+  revokedAt         DateTime? @map("revoked_at")
+  replacedByTokenId String?   @map("replaced_by_token_id")
+  createdByIp       String?   @map("created_by_ip")
+  creadoEn          DateTime  @default(now()) @map("creado_en")
+
+  @@map("refresh_tokens")
+}
+
+view VAforoActual {
+  personasDentro Int? @map("personas_dentro")
+
+  @@map("v_aforo_actual")
+}
+
+view VPanelClientes {
+  clienteId      BigInt?            @map("cliente_id")
+  codigo         String?            @db.VarChar(20)
+  nombre         String?            @db.VarChar(60)
+  apellido       String?            @db.VarChar(60)
+  email          String?            @db.VarChar(120)
+  telefono       String?            @db.VarChar(20)
+  plan           String?            @db.VarChar(60)
+  precio         Decimal?           @db.Decimal(10, 2)
+  suscripcionId  BigInt?            @map("suscripcion_id")
+  fechaInicio    DateTime?          @map("fecha_inicio") @db.Date
+  fechaFin       DateTime?          @map("fecha_fin") @db.Date
+  estado         EstadoSuscripcion?
+  diasRestantes  Int?               @map("dias_restantes")
+  semaforo       String?
+
+  @@map("v_panel_clientes")
+}

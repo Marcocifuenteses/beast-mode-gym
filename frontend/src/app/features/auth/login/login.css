@@ -1,0 +1,250 @@
+:host {
+  display: block;
+}
+
+.login-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.grid-overlay {
+  position: absolute;
+  inset: -42px;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: radial-gradient(ellipse at center, black 0%, transparent 72%);
+  pointer-events: none;
+  animation: gridDrift 18s linear infinite;
+}
+
+@keyframes gridDrift {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 42px 42px;
+  }
+}
+
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  position: relative;
+  z-index: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: var(--shadow-card), 0 0 60px -20px var(--accent-glow);
+  animation: fadeInUp 0.4s ease both;
+  padding-bottom: 8px;
+}
+
+.marca-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 32px 24px 8px;
+  animation: fadeInUp 0.4s ease both;
+}
+
+.logo {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  height: 64px;
+  width: 64px;
+}
+
+.logo-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: var(--accent);
+  border-right-color: var(--cian);
+  animation: spin 3.5s linear infinite;
+}
+
+.logo-icon {
+  font-size: 28px;
+  width: 28px;
+  height: 28px;
+  color: var(--accent);
+  animation:
+    pump 1.6s ease-in-out infinite,
+    glowPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.marca {
+  font-family: var(--font-brand);
+  font-size: 2.2rem;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  margin: 14px 0 0;
+  color: var(--text);
+}
+
+.campo-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  margin-bottom: 16px;
+  animation: fadeInUp 0.4s ease both;
+}
+
+.campo-grupo label {
+  font-size: 0.7rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding-left: 4px;
+}
+
+.input-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 4px 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.input-pill:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+  background: var(--surface-hover);
+}
+
+.input-pill mat-icon {
+  color: var(--text-muted);
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  transition: color 0.2s ease;
+}
+
+.input-pill:focus-within mat-icon {
+  color: var(--accent);
+}
+
+.input-pill input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.95rem;
+  font-family: inherit;
+  padding: 10px 0;
+}
+
+.input-pill input::placeholder {
+  color: var(--text-muted);
+}
+
+.boton-ojo {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--rojo);
+  font-size: 0.85rem;
+  margin: 4px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--rojo) 12%, transparent);
+  animation: shake 0.4s ease;
+}
+
+.error mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.boton-entrar {
+  width: 100%;
+  height: 44px;
+  margin-top: 28px;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  animation: fadeInUp 0.4s ease both;
+  transition: box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.boton-contenido {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.boton-entrar mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  transition: transform 0.2s ease;
+}
+
+.boton-entrar:not(:disabled):hover {
+  box-shadow: 0 0 24px var(--accent-glow);
+  transform: translateY(-1px);
+}
+
+.boton-entrar:not(:disabled):hover mat-icon {
+  transform: translateX(3px);
+}
+
+.boton-entrar:not(:disabled):active {
+  transform: translateY(0);
+}
+
+.boton-checkin {
+  width: 100%;
+  height: 42px;
+  margin-top: 10px;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  color: var(--text-muted) !important;
+  border-color: var(--border) !important;
+  animation: fadeInUp 0.4s ease both;
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.boton-checkin mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.boton-checkin:not(:disabled):hover {
+  color: var(--cian) !important;
+  border-color: var(--cian) !important;
+  background: color-mix(in srgb, var(--cian) 8%, transparent);
+}

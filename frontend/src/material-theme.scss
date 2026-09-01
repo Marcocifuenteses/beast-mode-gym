@@ -1,0 +1,30 @@
+// Tema oscuro moderno: violeta eléctrico como acento primario, cian como
+// acento secundario/glow. Ver https://material.angular.dev/guide/theming
+@use '@angular/material' as mat;
+
+html {
+  height: 100%;
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$violet-palette,
+        tertiary: mat.$cyan-palette,
+      ),
+      typography: Roboto,
+      density: 0,
+    )
+  );
+}
+
+body {
+  // Fuerza el tema oscuro de Material en toda la app (en vez de "light" o
+  // "light dark" que seguiría el sistema del usuario).
+  color-scheme: dark;
+
+  background-color: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-medium);
+
+  margin: 0;
+  height: 100%;
+}

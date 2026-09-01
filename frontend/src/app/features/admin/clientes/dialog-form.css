@@ -1,0 +1,19 @@
+.campos {
+  display: flex;
+  flex-direction: column;
+  min-width: 320px;
+}
+
+.campo {
+  width: 100%;
+}
+
+.ayuda {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.error {
+  color: var(--rojo);
+  font-size: 0.875rem;
+}

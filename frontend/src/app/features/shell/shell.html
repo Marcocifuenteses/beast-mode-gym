@@ -1,0 +1,81 @@
+<div class="fondo">
+  <div class="grid-overlay"></div>
+  <div class="glow glow-1"></div>
+  <div class="glow glow-2"></div>
+</div>
+
+<mat-toolbar color="primary" class="toolbar">
+  <mat-icon class="marca-icono">fitness_center</mat-icon>
+  <span class="marca">BEAST MODE</span>
+  <span class="spacer"></span>
+  @if (auth.usuario(); as usuario) {
+    <span class="usuario">{{ usuario.nombre }} · {{ usuario.rol }}</span>
+  }
+  <button mat-icon-button (click)="salir()" aria-label="Cerrar sesión" title="Cerrar sesión">
+    <mat-icon>logout</mat-icon>
+  </button>
+</mat-toolbar>
+
+<mat-sidenav-container class="contenedor">
+  <mat-sidenav mode="side" opened class="sidenav">
+    <div class="rail">
+      @if (auth.usuario()?.rol === 'ADMIN' || auth.usuario()?.rol === 'ENTRENADOR') {
+        <a
+          routerLink="/panel/dashboard"
+          routerLinkActive="activo"
+          class="rail-item"
+          matTooltip="Dashboard"
+          matTooltipPosition="right"
+        >
+          <mat-icon>dashboard</mat-icon>
+        </a>
+        <a
+          routerLink="/panel/clientes"
+          routerLinkActive="activo"
+          class="rail-item"
+          matTooltip="Clientes"
+          matTooltipPosition="right"
+        >
+          <mat-icon>groups</mat-icon>
+        </a>
+      }
+      @if (auth.usuario()?.rol === 'ENTRENADOR') {
+        <a
+          routerLink="/panel/checkin"
+          routerLinkActive="activo"
+          class="rail-item"
+          matTooltip="Check-in"
+          matTooltipPosition="right"
+        >
+          <mat-icon>qr_code_scanner</mat-icon>
+        </a>
+      }
+      @if (auth.usuario()?.rol === 'ADMIN') {
+        <a
+          routerLink="/panel/staff"
+          routerLinkActive="activo"
+          class="rail-item"
+          matTooltip="Personal"
+          matTooltipPosition="right"
+        >
+          <mat-icon>badge</mat-icon>
+        </a>
+      }
+      @if (auth.usuario()?.rol === 'SUSCRIPTOR') {
+        <a
+          routerLink="/mi-cuenta"
+          routerLinkActive="activo"
+          class="rail-item"
+          matTooltip="Mi cuenta"
+          matTooltipPosition="right"
+        >
+          <mat-icon>person</mat-icon>
+        </a>
+      }
+    </div>
+  </mat-sidenav>
+
+  <mat-sidenav-content class="contenido">
+    <router-outlet />
+  </mat-sidenav-content>
+</mat-sidenav-container>

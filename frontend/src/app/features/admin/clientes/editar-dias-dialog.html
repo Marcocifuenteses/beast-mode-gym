@@ -1,0 +1,26 @@
+<h2 mat-dialog-title>Editar vencimiento</h2>
+
+<form (ngSubmit)="guardar()" #f="ngForm">
+  <mat-dialog-content class="campos">
+    <p>Cliente: <strong>{{ data.nombreCliente }}</strong></p>
+    <p class="ayuda">Días restantes actuales: {{ data.diasRestantesActual }}</p>
+
+    <mat-form-field appearance="outline" class="campo">
+      <mat-label>Nuevo total de días restantes</mat-label>
+      <input matInput type="number" name="dias" [(ngModel)]="dias" required />
+    </mat-form-field>
+
+    <p class="ayuda">
+      Un número positivo alarga la membresía desde hoy; cero o negativo la marca como vencida de inmediato.
+    </p>
+
+    @if (error()) {
+      <p class="error">{{ error() }}</p>
+    }
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" mat-dialog-close>Cancelar</button>
+    <button mat-flat-button color="primary" type="submit" [disabled]="f.invalid || guardando()">Guardar</button>
+  </mat-dialog-actions>
+</form>

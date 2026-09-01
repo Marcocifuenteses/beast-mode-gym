@@ -1,0 +1,64 @@
+<div class="page-header">
+  <div class="page-header-icon"><mat-icon>person</mat-icon></div>
+  <div>
+    <h1>Mi cuenta</h1>
+    <p>Tu membresía y actividad en el gimnasio</p>
+  </div>
+</div>
+
+@if (cargando()) {
+  <mat-spinner diameter="32" />
+} @else if (perfil(); as p) {
+  <div class="tarjetas">
+    <mat-card class="tarjeta-plan">
+      <mat-card-header>
+        <mat-card-title>Mi membresía</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        @if (p.perfil.plan) {
+          <p><strong>Plan:</strong> {{ p.perfil.plan }}</p>
+          <p><strong>Vence:</strong> {{ p.perfil.fechaFin | date: 'dd/MM/yyyy' }}</p>
+          <p><strong>Días restantes:</strong> {{ p.perfil.diasRestantes }}</p>
+          <span class="chip" [class]="colorEstado(p.perfil.semaforo)">{{ p.perfil.semaforo }}</span>
+        } @else {
+          <p>No tienes un plan activo.</p>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="tarjeta-aforo">
+      <mat-card-header>
+        <mat-card-title>Aforo actual</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="aforo-circulo">
+          <span class="aforo-pulso"></span>
+          <p class="aforo-numero">{{ aforo() ?? '—' }}</p>
+        </div>
+        <p class="aforo-etiqueta">personas en el gimnasio ahora</p>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <mat-card class="tarjeta-historial">
+    <mat-card-header>
+      <mat-card-title>Historial de asistencias</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      @if (p.historialAsistencias.length === 0) {
+        <p>Aún no tienes visitas registradas.</p>
+      } @else {
+        <mat-list>
+          @for (a of p.historialAsistencias; track a.id) {
+            <mat-list-item>
+              <span matListItemTitle>{{ a.entrada | date: 'dd/MM/yyyy HH:mm' }}</span>
+              <span matListItemLine>
+                {{ a.salida ? 'Salida: ' + (a.salida | date: 'HH:mm') : 'Visita en curso' }}
+              </span>
+            </mat-list-item>
+          }
+        </mat-list>
+      }
+    </mat-card-content>
+  </mat-card>
+}

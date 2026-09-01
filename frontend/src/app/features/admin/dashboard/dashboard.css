@@ -1,0 +1,176 @@
+:host {
+  display: block;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 24px;
+  animation: fadeInUp 0.3s ease both;
+}
+
+.page-header-icon {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.page-header p {
+  margin: 2px 0 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.tarjetas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.tarjeta {
+  background: var(--glass-bg) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-left: 3px solid var(--accent);
+  box-shadow: var(--glass-shadow);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  animation: fadeInUp 0.4s ease both;
+}
+
+.tarjeta:hover {
+  transform: translateY(-4px);
+  background: var(--glass-bg-hover) !important;
+  box-shadow: var(--glass-shadow-hover);
+}
+
+.tarjeta.cian {
+  border-left-color: var(--cian);
+}
+.tarjeta.verde {
+  border-left-color: var(--verde);
+}
+.tarjeta.amarillo {
+  border-left-color: var(--amarillo);
+}
+
+.tarjeta-icono {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+  margin-bottom: 14px;
+}
+
+.tarjeta-icono::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 14px;
+  border: 1.5px solid transparent;
+  border-top-color: currentColor;
+  opacity: 0.5;
+  animation: spin 4s linear infinite;
+}
+
+.tarjeta.cian .tarjeta-icono {
+  background: color-mix(in srgb, var(--cian) 18%, transparent);
+  color: var(--cian);
+}
+.tarjeta.verde .tarjeta-icono {
+  background: color-mix(in srgb, var(--verde) 18%, transparent);
+  color: var(--verde);
+}
+.tarjeta.amarillo .tarjeta-icono {
+  background: color-mix(in srgb, var(--amarillo) 18%, transparent);
+  color: var(--amarillo);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.tarjeta .valor {
+  font-size: 1.85rem;
+  font-weight: 800;
+  margin: 0;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.tarjeta .etiqueta {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.grafica-card {
+  max-width: 900px;
+  background: var(--glass-bg) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  animation: fadeInUp 0.5s ease both;
+  animation-delay: 0.15s;
+}
+
+.grafica {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 140px;
+}
+
+.barra-wrap {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+
+.barra {
+  width: 100%;
+  min-height: 2px;
+  background: linear-gradient(180deg, var(--accent) 0%, var(--cian) 100%);
+  border-radius: 3px 3px 0 0;
+  transform-origin: bottom;
+  animation: growUp 0.5s ease both;
+  transition: filter 0.15s ease;
+}
+
+.barra:hover {
+  filter: brightness(1.3);
+}
+
+@keyframes growUp {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}

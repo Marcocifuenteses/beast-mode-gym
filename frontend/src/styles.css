@@ -1,0 +1,196 @@
+/* Variables propias (además de los tokens --mat-sys-* que genera Material) */
+:root {
+  --bg: #0b0d12;
+  --surface: #14171f;
+  --surface-2: #1b1f2a;
+  --surface-hover: #232838;
+  --border: #262b38;
+  --text: #e7e9ee;
+  --text-muted: #8b93a7;
+
+  --accent: #a78bfa;
+  --accent-strong: #8b5cf6;
+  --accent-glow: rgba(167, 139, 250, 0.35);
+
+  --cian: #22d3ee;
+  --cian-glow: rgba(34, 211, 238, 0.35);
+
+  --verde: #4ade80;
+  --amarillo: #fbbf24;
+  --rojo: #f87171;
+  --gris: #64748b;
+
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.35);
+  --shadow-card-hover: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--accent-glow);
+
+  --font-brand: 'Bebas Neue', 'Roboto', sans-serif;
+
+  /* Glassmorphism: fondo semi-transparente + blur, para usar sobre la
+     cuadrícula animada del fondo. */
+  --glass-bg: rgba(255, 255, 255, 0.045);
+  --glass-bg-hover: rgba(255, 255, 255, 0.075);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-blur: blur(20px);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+  --glass-shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px var(--accent-glow);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Esquinas consistentes y más suaves en toda la app para los componentes de
+   Material que no tienen ya su propio border-radius explícito. */
+.mat-mdc-form-field {
+  --mdc-outlined-text-field-container-shape: 12px;
+  --mdc-filled-text-field-container-shape: 12px 12px 0 0;
+}
+
+.mat-mdc-dialog-surface {
+  --mdc-dialog-container-shape: 16px;
+  background: var(--surface) !important;
+  background-image: linear-gradient(var(--glass-bg-hover), var(--glass-bg-hover)) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow) !important;
+}
+
+.mat-mdc-card {
+  --mdc-elevated-card-container-shape: 16px;
+  --mdc-outlined-card-container-shape: 16px;
+}
+
+.mat-mdc-snack-bar-container {
+  --mdc-snackbar-container-shape: 10px;
+}
+
+html,
+body {
+  background: var(--bg);
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--accent);
+}
+
+/* Scrollbar oscuro */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--surface-2);
+  border-radius: 8px;
+  border: 2px solid var(--bg);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--surface-hover);
+}
+
+/* Foco visible con el acento de marca, en vez del azul por defecto */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Animaciones compartidas — se referencian desde el CSS con encapsulación de
+   cada componente; los nombres de @keyframes no se re-escriben por Angular,
+   así que definirlas una sola vez aquí, globalmente, es suficiente. */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pulseGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--accent-glow);
+  }
+  50% {
+    box-shadow: 0 0 0 8px transparent;
+  }
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(24px, -18px) scale(1.08);
+  }
+}
+
+@keyframes pump {
+  0%,
+  100% {
+    transform: rotate(-14deg) scale(1);
+  }
+  50% {
+    transform: rotate(14deg) scale(1.12);
+  }
+}
+
+@keyframes shake {
+  10%,
+  90% {
+    transform: translateX(-1px);
+  }
+  20%,
+  80% {
+    transform: translateX(2px);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translateX(-4px);
+  }
+  40%,
+  60% {
+    transform: translateX(4px);
+  }
+}
+
+@keyframes glowPulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 10px var(--accent-glow));
+  }
+  50% {
+    filter: drop-shadow(0 0 22px var(--accent)) drop-shadow(0 0 8px var(--cian));
+  }
+}

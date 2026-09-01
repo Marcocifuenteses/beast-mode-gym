@@ -1,0 +1,13 @@
+# Cubre archivos sueltos en la raíz; cada subproyecto tiene su propio
+# .gitignore más específico (backend/.gitignore, frontend/.gitignore).
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json

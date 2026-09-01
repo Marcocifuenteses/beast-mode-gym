@@ -1,0 +1,40 @@
+<div class="page-header">
+  <div class="page-header-icon"><mat-icon>dashboard</mat-icon></div>
+  <div>
+    <h1>Dashboard</h1>
+    <p>Resumen del gimnasio en tiempo real</p>
+  </div>
+</div>
+
+@if (cargando()) {
+  <mat-spinner diameter="32" />
+} @else if (resumen()) {
+  <div class="tarjetas">
+    @for (t of tarjetas(); track t.etiqueta; let i = $index) {
+      <mat-card class="tarjeta" [class]="t.color" [style.animation-delay.ms]="i * 60">
+        <mat-card-content>
+          <div class="tarjeta-icono">
+            <mat-icon>{{ t.icono }}</mat-icon>
+          </div>
+          <p class="valor">{{ t.valor }}</p>
+          <p class="etiqueta">{{ t.etiqueta }}</p>
+        </mat-card-content>
+      </mat-card>
+    }
+  </div>
+
+  <mat-card class="grafica-card">
+    <mat-card-header>
+      <mat-card-title>Asistencias — últimos 30 días</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="grafica">
+        @for (dia of resumen()!.grafica30Dias; track dia.fecha; let i = $index) {
+          <div class="barra-wrap" [title]="dia.fecha + ': ' + dia.asistencias">
+            <div class="barra" [style.height.%]="alturaBarra(dia.asistencias)" [style.animation-delay.ms]="i * 15"></div>
+          </div>
+        }
+      </div>
+    </mat-card-content>
+  </mat-card>
+}
