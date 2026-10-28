@@ -1,0 +1,35 @@
+# Despliegue en Render (plan gratis): un solo servicio web que compila el
+# frontend de Angular y lo sirve desde el backend de Express, en la misma URL.
+# La base de datos es PostgreSQL en Neon (DATABASE_URL se pega a mano).
+# Uso: Render > New > Blueprint > elegir este repositorio.
+services:
+  - type: web
+    name: beast-mode-gym
+    runtime: node
+    plan: free
+    region: virginia
+    # El plan gratis no tiene "pre-deploy command", así que las migraciones
+    # se aplican al final del build. --include=dev hace falta porque con
+    # NODE_ENV=production npm omitiría el compilador de TypeScript y Prisma.
+    buildCommand: >-
+      cd frontend && npm ci --include=dev && npm run build &&
+      cd ../backend && npm ci --include=dev && npx prisma generate && npm run build &&
+      npx prisma migrate deploy
+    startCommand: cd backend && npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: RESEND_API_KEY
+        sync: false
+      - key: AFORO_CAPACIDAD
+        value: "60"

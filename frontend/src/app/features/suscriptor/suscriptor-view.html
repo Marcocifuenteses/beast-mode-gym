@@ -1,64 +1,79 @@
-<div class="page-header">
-  <div class="page-header-icon"><mat-icon>person</mat-icon></div>
-  <div>
-    <h1>Mi cuenta</h1>
-    <p>Tu membresía y actividad en el gimnasio</p>
-  </div>
-</div>
+<div class="page">
+  @if (cargando()) {
+    <div class="empty">Cargando tu membresía…</div>
+  } @else if (error() || !perfil()) {
+    <div class="empty">No se pudo cargar tu membresía. Recarga la página para intentarlo de nuevo.</div>
+  } @else {
+    @let p = perfil()!.perfil;
 
-@if (cargando()) {
-  <mat-spinner diameter="32" />
-} @else if (perfil(); as p) {
-  <div class="tarjetas">
-    <mat-card class="tarjeta-plan">
-      <mat-card-header>
-        <mat-card-title>Mi membresía</mat-card-title>
-      </mat-card-header>
-      <mat-card-content>
-        @if (p.perfil.plan) {
-          <p><strong>Plan:</strong> {{ p.perfil.plan }}</p>
-          <p><strong>Vence:</strong> {{ p.perfil.fechaFin | date: 'dd/MM/yyyy' }}</p>
-          <p><strong>Días restantes:</strong> {{ p.perfil.diasRestantes }}</p>
-          <span class="chip" [class]="colorEstado(p.perfil.semaforo)">{{ p.perfil.semaforo }}</span>
-        } @else {
-          <p>No tienes un plan activo.</p>
-        }
-      </mat-card-content>
-    </mat-card>
-
-    <mat-card class="tarjeta-aforo">
-      <mat-card-header>
-        <mat-card-title>Aforo actual</mat-card-title>
-      </mat-card-header>
-      <mat-card-content>
-        <div class="aforo-circulo">
-          <span class="aforo-pulso"></span>
-          <p class="aforo-numero">{{ aforo() ?? '—' }}</p>
+    @if (p.plan && p.fechaFin) {
+      <section class="card-mem">
+        <div class="label">{{ p.nombre }} {{ p.apellido }} · Plan {{ p.plan }}</div>
+        <div>
+          <b class="num">{{ (p.diasRestantes ?? 0) > 0 ? p.diasRestantes : 0 }}</b>
+          <span>días restantes</span>
         </div>
-        <p class="aforo-etiqueta">personas en el gimnasio ahora</p>
-      </mat-card-content>
-    </mat-card>
-  </div>
+        <div class="label">Vence el {{ fechaCorta(p.fechaFin) }}</div>
+        <a class="btn-qr" routerLink="/mi-cuenta/acceso">
+          <span class="material-icons" aria-hidden="true">qr_code_2</span>
+          Mostrar mi QR de acceso
+        </a>
+      </section>
+    } @else {
+      <section class="card-mem">
+        <div class="label">{{ p.nombre }} {{ p.apellido }}</div>
+        <div class="sin-plan">No tienes un plan activo</div>
+        <div class="label">Pasa a recepción para elegir uno</div>
+      </section>
+    }
 
-  <mat-card class="tarjeta-historial">
-    <mat-card-header>
-      <mat-card-title>Historial de asistencias</mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-      @if (p.historialAsistencias.length === 0) {
-        <p>Aún no tienes visitas registradas.</p>
-      } @else {
-        <mat-list>
-          @for (a of p.historialAsistencias; track a.id) {
-            <mat-list-item>
-              <span matListItemTitle>{{ a.entrada | date: 'dd/MM/yyyy HH:mm' }}</span>
-              <span matListItemLine>
-                {{ a.salida ? 'Salida: ' + (a.salida | date: 'HH:mm') : 'Visita en curso' }}
-              </span>
-            </mat-list-item>
-          }
-        </mat-list>
+    <section class="panel">
+      <div class="fila-titulo">
+        <h2>Estado</h2>
+        @if (estado(); as e) {
+          <span class="pill" [class]="e.clase">{{ e.texto }}</span>
+        }
+      </div>
+      <dl class="kv">
+        <dt>Código de socio</dt>
+        <dd class="num">{{ p.codigo }}</dd>
+        @if (p.plan) {
+          <dt>Plan</dt>
+          <dd>{{ p.plan }}</dd>
+        }
+        @if (p.precio) {
+          <dt>Precio</dt>
+          <dd class="num">{{ formatoQ(p.precio) }}</dd>
+        }
+        <dt>Ahora</dt>
+        <dd>{{ dentro() ? 'Dentro del gym' : 'Fuera del gym' }}</dd>
+      </dl>
+      @if (p.semaforo === 'POR_VENCER' || p.semaforo === 'VENCIDA') {
+        <p class="note">Renueva en recepción para seguir entrenando sin interrupciones.</p>
       }
-    </mat-card-content>
-  </mat-card>
-}
+    </section>
+
+    <section class="panel">
+      <h2>Mis asistencias</h2>
+      @if (perfil()!.historialAsistencias.length === 0) {
+        <p class="note">Aún no tienes visitas registradas.</p>
+      } @else {
+        <div class="log">
+          @for (a of perfil()!.historialAsistencias; track a.id) {
+            <div>
+              <span>{{ a.entrada | date: 'EEE d MMM' }}</span>
+              <span>
+                <span class="num">{{ a.entrada | date: 'HH:mm' }}</span>
+                @if (a.salida) {
+                  <span class="note"> · {{ duracion(a.entrada, a.salida) }}</span>
+                } @else {
+                  <span class="pill in">En curso</span>
+                }
+              </span>
+            </div>
+          }
+        </div>
+      }
+    </section>
+  }
+</div>

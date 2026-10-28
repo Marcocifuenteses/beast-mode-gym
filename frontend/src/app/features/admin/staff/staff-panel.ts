@@ -1,24 +1,24 @@
 import { Component, OnInit, signal } from '@angular/core';
-import { MatTableModule } from '@angular/material/table';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { UsuariosService, type StaffUsuario } from '../../../core/services/usuarios.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { iniciales } from '../../../shared/estado';
 import { NuevoStaffDialog } from './nuevo-staff-dialog';
 
 @Component({
   selector: 'app-staff-panel',
   standalone: true,
-  imports: [MatTableModule, MatButtonModule, MatIconModule],
   templateUrl: './staff-panel.html',
   styleUrl: './staff-panel.css',
 })
 export class StaffPanel implements OnInit {
+  readonly iniciales = iniciales;
+
   staff = signal<StaffUsuario[]>([]);
   cargando = signal(true);
-  readonly columnas = ['nombre', 'email', 'rol', 'acciones'];
+  /** Id de la cuenta que espera el segundo toque para confirmar la desactivación. */
+  confirmando = signal<string | null>(null);
 
   constructor(
     private readonly usuariosService: UsuariosService,
@@ -54,9 +54,11 @@ export class StaffPanel implements OnInit {
   }
 
   desactivar(usuario: StaffUsuario): void {
-    const confirmado = confirm(`¿Desactivar a ${usuario.nombre} ${usuario.apellido}?`);
-    if (!confirmado) return;
-
+    if (this.confirmando() !== usuario.id) {
+      this.confirmando.set(usuario.id);
+      return;
+    }
+    this.confirmando.set(null);
     this.usuariosService.eliminar(usuario.id).subscribe({
       next: () => {
         this.snackBar.open('Cuenta desactivada', 'Cerrar', { duration: 3000 });

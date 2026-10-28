@@ -26,6 +26,7 @@ export interface ClientePanel {
   estado: EstadoSuscripcion | null;
   diasRestantes: number | null;
   semaforo: Semaforo;
+  dentro: boolean;
 }
 
 export interface SuscripcionHistorial {
@@ -67,4 +68,21 @@ export interface CheckinResultado {
   accion: 'ENTRADA' | 'SALIDA';
   cliente: { nombre: string; apellido: string; codigo: string };
   asistencia: Asistencia;
+}
+
+export interface Aforo {
+  personasDentro: number;
+  capacidad: number;
+}
+
+export interface HorasPico {
+  dias: number;
+  horas: { hora: number; promedio: number }[];
+}
+
+export interface QrAcceso {
+  token: string;
+  expiraEn: string;
+  vigenciaSegundos: number;
+  codigo: string;
 }

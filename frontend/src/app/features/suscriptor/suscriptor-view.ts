@@ -1,62 +1,53 @@
-import { Component, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, OnInit, computed, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { MatCardModule } from '@angular/material/card';
-import { MatListModule } from '@angular/material/list';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatIconModule } from '@angular/material/icon';
+import { RouterLink } from '@angular/router';
 import { ClientesService } from '../../core/services/clientes.service';
-import { CheckinService } from '../../core/services/checkin.service';
 import type { PerfilSuscriptor } from '../../core/models/gym.models';
-
-const INTERVALO_AFORO_MS = 30_000;
+import { estadoMembresia, fechaCorta, formatoQ } from '../../shared/estado';
 
 @Component({
   selector: 'app-suscriptor-view',
   standalone: true,
-  imports: [DatePipe, MatCardModule, MatListModule, MatProgressSpinnerModule, MatIconModule],
+  imports: [DatePipe, RouterLink],
   templateUrl: './suscriptor-view.html',
   styleUrl: './suscriptor-view.css',
 })
-export class SuscriptorView implements OnInit, OnDestroy {
+export class SuscriptorView implements OnInit {
+  readonly fechaCorta = fechaCorta;
+  readonly formatoQ = formatoQ;
+
   perfil = signal<PerfilSuscriptor | null>(null);
-  aforo = signal<number | null>(null);
   cargando = signal(true);
+  error = signal(false);
 
-  private intervaloId?: ReturnType<typeof setInterval>;
+  readonly estado = computed(() => {
+    const p = this.perfil()?.perfil;
+    return p ? estadoMembresia(p) : null;
+  });
 
-  constructor(
-    private readonly clientesService: ClientesService,
-    private readonly checkinService: CheckinService,
-  ) {}
+  /** Hay una visita abierta si la asistencia más reciente no tiene salida. */
+  readonly dentro = computed(() => {
+    const ultima = this.perfil()?.historialAsistencias[0];
+    return !!ultima && !ultima.salida;
+  });
+
+  constructor(private readonly clientesService: ClientesService) {}
 
   ngOnInit(): void {
-    this.clientesService.miPerfil().subscribe((p) => {
-      this.perfil.set(p);
-      this.cargando.set(false);
+    this.clientesService.miPerfil().subscribe({
+      next: (p) => {
+        this.perfil.set(p);
+        this.cargando.set(false);
+      },
+      error: () => {
+        this.error.set(true);
+        this.cargando.set(false);
+      },
     });
-
-    this.actualizarAforo();
-    this.intervaloId = setInterval(() => this.actualizarAforo(), INTERVALO_AFORO_MS);
   }
 
-  ngOnDestroy(): void {
-    if (this.intervaloId) clearInterval(this.intervaloId);
-  }
-
-  private actualizarAforo(): void {
-    this.checkinService.aforo().subscribe((r) => this.aforo.set(r.personasDentro));
-  }
-
-  colorEstado(semaforo: string): string {
-    switch (semaforo) {
-      case 'VIGENTE':
-        return 'verde';
-      case 'POR_VENCER':
-        return 'amarillo';
-      case 'VENCIDA':
-        return 'rojo';
-      default:
-        return 'gris';
-    }
+  duracion(entrada: string, salida: string): string {
+    const min = Math.round((new Date(salida).getTime() - new Date(entrada).getTime()) / 60000);
+    return min < 60 ? `${min} min` : `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')} min`;
   }
 }

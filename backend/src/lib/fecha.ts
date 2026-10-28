@@ -17,6 +17,12 @@ export function hoyGuatemala(): Date {
   return new Date(Date.UTC(obtener('year'), obtener('month') - 1, obtener('day')));
 }
 
+/** Hora del día (0-23) de un instante, según la zona horaria de Guatemala. */
+export function horaGuatemala(fecha: Date): number {
+  const hora = new Intl.DateTimeFormat('en-US', { timeZone: TIMEZONE, hour: 'numeric', hourCycle: 'h23' }).format(fecha);
+  return Number(hora);
+}
+
 export function sumarDias(fecha: Date, dias: number): Date {
   const copia = new Date(fecha);
   copia.setUTCDate(copia.getUTCDate() + dias);

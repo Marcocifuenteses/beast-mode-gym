@@ -44,12 +44,16 @@ export async function procesarRecordatoriosPorVencer(): Promise<number> {
   return candidatas.length;
 }
 
-/** Envía "vencida" a las suscripciones VENCIDA que aún no tienen el aviso automático. */
+/**
+ * Envía "vencida" a las suscripciones VENCIDA que aún no tienen el aviso automático,
+ * salvo que el cliente ya haya renovado (tiene otra suscripción ACTIVA).
+ */
 export async function procesarRecordatoriosVencidas(): Promise<number> {
   const candidatas = await prisma.suscripcion.findMany({
     where: {
       estado: 'VENCIDA',
       recordatorios: { none: { tipo: 'VENCIDA', enviadoPor: null } },
+      cliente: { suscripciones: { none: { estado: 'ACTIVA' } } },
     },
     include: { cliente: { include: { usuario: true } }, plan: true },
   });

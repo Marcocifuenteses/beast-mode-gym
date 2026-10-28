@@ -13,6 +13,10 @@ export class SuscripcionesService {
     return this.http.post(this.base, data);
   }
 
+  renovar(id: string, metodoPago: MetodoPago) {
+    return this.http.post(`${this.base}/${id}/renovar`, { metodoPago });
+  }
+
   cancelar(id: string) {
     return this.http.put(`${this.base}/${id}/cancelar`, {});
   }

@@ -44,7 +44,16 @@ export const routes: Routes = [
     children: [
       {
         path: '',
+        pathMatch: 'full',
         loadComponent: () => import('./features/suscriptor/suscriptor-view').then((m) => m.SuscriptorView),
+      },
+      {
+        path: 'acceso',
+        loadComponent: () => import('./features/suscriptor/acceso-view').then((m) => m.AccesoView),
+      },
+      {
+        path: 'aforo',
+        loadComponent: () => import('./features/suscriptor/aforo-view').then((m) => m.AforoView),
       },
     ],
   },

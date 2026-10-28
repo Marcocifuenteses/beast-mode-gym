@@ -60,11 +60,7 @@ export async function issueTokenPair(
 
 export class RefreshTokenError extends Error {}
 
-/**
- * Verifica y rota un refresh token. Si el token ya fue revocado (reutilizado
- * tras rotación), se interpreta como robo: se revocan todos los tokens del
- * usuario y se rechaza la solicitud.
- */
+
 export async function rotateRefreshToken(rawRefreshToken: string, createdByIp?: string): Promise<TokenPair> {
   let payload: RefreshTokenPayload;
   try {

@@ -1,0 +1,121 @@
+@let c = cliente();
+
+<div class="ficha">
+  <div class="cabeza">
+    <span class="av">{{ iniciales() }}</span>
+    <div class="nombre">
+      <strong>{{ c.nombre }} {{ c.apellido }}</strong>
+      <div class="note">{{ c.email }}</div>
+    </div>
+    @if (c.dentro) {
+      <span class="pill in">Dentro</span>
+    } @else {
+      <span class="pill" [class]="estado().clase">{{ estado().texto }}</span>
+    }
+  </div>
+
+  <dl class="kv">
+    <dt>Código</dt>
+    <dd class="num">{{ c.codigo }}</dd>
+    @if (c.plan) {
+      <dt>Plan</dt>
+      <dd>{{ c.plan }}@if (c.precio) { · {{ formatoQ(c.precio) }} }</dd>
+      <dt>Vence</dt>
+      <dd>
+        {{ c.fechaFin ? fechaCorta(c.fechaFin) : '—' }}
+        @if (c.diasRestantes !== null) {
+          <span class="note">({{ c.diasRestantes >= 0 ? c.diasRestantes + ' días' : 'hace ' + -c.diasRestantes + ' días' }})</span>
+        }
+      </dd>
+    }
+    @if (c.telefono) {
+      <dt>Teléfono</dt>
+      <dd>{{ c.telefono }}</dd>
+    }
+    <dt>Ahora</dt>
+    <dd>{{ c.dentro ? 'Dentro del gym' : 'Fuera del gym' }}</dd>
+  </dl>
+
+  @if (error()) {
+    <p class="error" role="alert">{{ error() }}</p>
+  }
+
+  <!-- Entrada / salida: el check-in es una tarea del entrenador (regla del backend). -->
+  @if (esEntrenador()) {
+    <button class="btn" type="button" [disabled]="procesando() || !puedeEntrar()" (click)="registrarEntradaSalida()">
+      <span class="material-icons" aria-hidden="true">{{ c.dentro ? 'logout' : 'login' }}</span>
+      {{ c.dentro ? 'Registrar salida' : 'Registrar entrada' }}
+    </button>
+    @if (!puedeEntrar()) {
+      <p class="note">
+        {{ c.semaforo === 'SIN_PLAN' ? 'No tiene plan: asígnale uno antes de registrar la entrada.' : 'Membresía vencida: renueva antes de registrar la entrada.' }}
+      </p>
+    }
+  }
+
+  <!-- Renovación con el mismo plan, con paso de confirmación y método de pago. -->
+  @if (renovacion(); as r) {
+    @if (!renovando()) {
+      <button class="btn ghost" type="button" [disabled]="!r.disponible" (click)="renovando.set(true)">
+        <span class="material-icons" aria-hidden="true">autorenew</span>
+        Renovar {{ r.plan }}
+      </button>
+      @if (!r.disponible) {
+        <p class="note">El plan {{ r.plan }} ya no está disponible. Asigna otro plan.</p>
+      }
+    } @else {
+      <section class="renovar">
+        <div class="label">Renovar {{ r.plan }}</div>
+        <p class="resumen">
+          Cobro <b class="num">{{ formatoQ(r.precio) }}</b> · vigente hasta <b>{{ fechaCorta(r.hasta) }}</b>
+        </p>
+        <p class="note">
+          {{ r.vigente ? 'Los días que le quedan se conservan: se suman desde el vencimiento actual.' : 'La nueva membresía empieza hoy.' }}
+        </p>
+        <div class="chips" role="group" aria-label="Método de pago">
+          <button type="button" [attr.aria-pressed]="metodoPago() === 'EFECTIVO'" (click)="metodoPago.set('EFECTIVO')">
+            Efectivo
+          </button>
+          <button type="button" [attr.aria-pressed]="metodoPago() === 'TRANSFERENCIA'" (click)="metodoPago.set('TRANSFERENCIA')">
+            Transferencia
+          </button>
+        </div>
+        <div class="grid2">
+          <button class="btn ghost" type="button" (click)="renovando.set(false)">Cancelar</button>
+          <button class="btn" type="button" [disabled]="procesando()" (click)="confirmarRenovacion()">
+            Cobrar y renovar
+          </button>
+        </div>
+      </section>
+    }
+  }
+
+  <div class="acciones">
+    @if (c.semaforo === 'SIN_PLAN' || c.semaforo === 'VENCIDA') {
+      <button class="btn sm ghost" type="button" (click)="asignarPlan()">
+        <span class="material-icons" aria-hidden="true">card_membership</span>
+        {{ c.semaforo === 'SIN_PLAN' ? 'Asignar plan' : 'Otro plan' }}
+      </button>
+    }
+    @if (c.suscripcionId) {
+      <button class="btn sm ghost" type="button" (click)="enviarRecordatorio()">
+        <span class="material-icons" aria-hidden="true">mail</span>
+        Recordatorio
+      </button>
+    }
+    @if (esAdmin() && c.suscripcionId) {
+      <button class="btn sm ghost" type="button" (click)="editarDias()">
+        <span class="material-icons" aria-hidden="true">edit_calendar</span>
+        Vencimiento
+      </button>
+    }
+  </div>
+
+  @if (esAdmin()) {
+    <button class="btn danger" type="button" (click)="eliminar()">
+      {{ confirmarEliminar() ? 'Toca otra vez para confirmar' : 'Eliminar socio' }}
+    </button>
+  }
+
+  <button class="btn ghost" type="button" (click)="cerrar()">Cerrar</button>
+</div>

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { API_BASE_URL } from '../api-config';
-import type { ClienteCompleto, ClientePanel, PerfilSuscriptor } from '../models/gym.models';
+import type { ClienteCompleto, ClientePanel, PerfilSuscriptor, QrAcceso } from '../models/gym.models';
 
 export interface CrearClienteInput {
   nombre: string;
@@ -43,5 +43,9 @@ export class ClientesService {
 
   miPerfil() {
     return this.http.get<PerfilSuscriptor>(`${this.base}/me/perfil`);
+  }
+
+  miQr() {
+    return this.http.get<QrAcceso>(`${this.base}/me/qr`);
   }
 }

@@ -1,16 +1,9 @@
 import { Resend } from 'resend';
 import { env } from '../config/env';
 
-// Sin dominio propio verificado en Resend, este es el remitente de pruebas:
-// solo entrega correos a la dirección con la que te registraste en Resend.
-// Cuando verifiques un dominio (Resend > Domains), cambia esto por algo como
-// 'BEAST MODE <recordatorios@tudominio.com>' para poder enviar a cualquier destinatario.
+
 const FROM = 'BEAST MODE <onboarding@resend.dev>';
 
-// Sin RESEND_API_KEY (placeholder por defecto) no se puede instanciar un
-// cliente real; en ese caso se loguea el correo en vez de enviarlo, para que
-// el resto del flujo (registrar el recordatorio, correr el cron) siga siendo
-// probable en desarrollo sin depender de una cuenta de Resend real.
 const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
 
 export interface DatosPorVencer {
@@ -35,9 +28,6 @@ export interface DatosPagoConfirmado {
   fechaFin: string;
 }
 
-// --- Layout compartido: misma marca que la interfaz (violeta/cian), pensado
-// para verse bien tanto en la bandeja como en el cliente de correo de un
-// teléfono, tablet o computadora (ancho fluido + una sola columna). ---
 
 function fila(etiqueta: string, valor: string): string {
   return `

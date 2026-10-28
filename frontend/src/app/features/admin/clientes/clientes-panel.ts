@@ -1,52 +1,76 @@
-import { Component, OnInit, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { MatTableModule } from '@angular/material/table';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { Component, OnInit, computed, signal } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
+import { MatBottomSheet } from '@angular/material/bottom-sheet';
 import { ClientesService } from '../../../core/services/clientes.service';
-import { RecordatoriosService } from '../../../core/services/recordatorios.service';
-import { AuthService } from '../../../core/services/auth.service';
-import type { ClientePanel, Semaforo } from '../../../core/models/gym.models';
+import type { ClientePanel } from '../../../core/models/gym.models';
+import { estadoMembresia, fechaCorta, iniciales } from '../../../shared/estado';
 import { NuevoClienteDialog } from './nuevo-cliente-dialog';
-import { AsignarPlanDialog } from './asignar-plan-dialog';
-import { EditarDiasDialog } from './editar-dias-dialog';
+import { FichaSocio, type FichaSocioData } from './ficha-socio';
+
+type Filtro = 'todos' | 'dentro' | 'porvencer' | 'vencidas' | 'sinplan';
+
+const FILTROS: { clave: Filtro; etiqueta: string }[] = [
+  { clave: 'todos', etiqueta: 'Todos' },
+  { clave: 'dentro', etiqueta: 'En el gym' },
+  { clave: 'porvencer', etiqueta: 'Por vencer' },
+  { clave: 'vencidas', etiqueta: 'Vencidas' },
+  { clave: 'sinplan', etiqueta: 'Sin plan' },
+];
 
 @Component({
   selector: 'app-clientes-panel',
   standalone: true,
-  imports: [
-    FormsModule,
-    MatTableModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    MatButtonModule,
-    MatIconModule,
-    MatChipsModule,
-  ],
   templateUrl: './clientes-panel.html',
   styleUrl: './clientes-panel.css',
 })
 export class ClientesPanel implements OnInit {
+  readonly filtros = FILTROS;
+  readonly estadoMembresia = estadoMembresia;
+  readonly fechaCorta = fechaCorta;
+  readonly iniciales = iniciales;
+
   clientes = signal<ClientePanel[]>([]);
   cargando = signal(true);
-  busqueda = '';
-  estado: Semaforo | '' = '';
+  error = signal(false);
+  busqueda = signal('');
+  filtro = signal<Filtro>('todos');
 
-  readonly columnas = ['codigo', 'nombre', 'plan', 'diasRestantes', 'estado', 'acciones'];
+  // La lista completa de un gimnasio es pequeña: se carga una vez y se filtra
+  // en el navegador, así la búsqueda responde al instante mientras se escribe.
+  readonly visibles = computed(() => {
+    const q = this.busqueda().trim().toLowerCase();
+    return this.clientes().filter((c) => {
+      if (q && !`${c.nombre} ${c.apellido} ${c.codigo} ${c.email}`.toLowerCase().includes(q)) return false;
+      switch (this.filtro()) {
+        case 'dentro':
+          return c.dentro;
+        case 'porvencer':
+          return c.semaforo === 'POR_VENCER';
+        case 'vencidas':
+          return c.semaforo === 'VENCIDA';
+        case 'sinplan':
+          return c.semaforo === 'SIN_PLAN';
+        default:
+          return true;
+      }
+    });
+  });
+
+  readonly conteos = computed(() => {
+    const l = this.clientes();
+    return {
+      todos: l.length,
+      dentro: l.filter((c) => c.dentro).length,
+      porvencer: l.filter((c) => c.semaforo === 'POR_VENCER').length,
+      vencidas: l.filter((c) => c.semaforo === 'VENCIDA').length,
+      sinplan: l.filter((c) => c.semaforo === 'SIN_PLAN').length,
+    } satisfies Record<Filtro, number>;
+  });
 
   constructor(
     private readonly clientesService: ClientesService,
-    private readonly recordatoriosService: RecordatoriosService,
-    private readonly snackBar: MatSnackBar,
     private readonly dialog: MatDialog,
-    readonly auth: AuthService,
+    private readonly sheet: MatBottomSheet,
   ) {}
 
   ngOnInit(): void {
@@ -54,52 +78,31 @@ export class ClientesPanel implements OnInit {
   }
 
   cargar(): void {
-    this.cargando.set(true);
-    this.clientesService.listar({ estado: this.estado || undefined, busqueda: this.busqueda || undefined }).subscribe({
+    this.clientesService.listar().subscribe({
       next: (clientes) => {
         this.clientes.set(clientes);
+        this.error.set(false);
         this.cargando.set(false);
       },
-      error: () => this.cargando.set(false),
-    });
-  }
-
-  esAdmin(): boolean {
-    return this.auth.usuario()?.rol === 'ADMIN';
-  }
-
-  colorEstado(semaforo: Semaforo): string {
-    switch (semaforo) {
-      case 'VIGENTE':
-        return 'verde';
-      case 'POR_VENCER':
-        return 'amarillo';
-      case 'VENCIDA':
-        return 'rojo';
-      default:
-        return 'gris';
-    }
-  }
-
-  enviarRecordatorio(cliente: ClientePanel): void {
-    if (!cliente.suscripcionId || !cliente.estado) return;
-    const tipo = cliente.semaforo === 'VENCIDA' ? 'VENCIDA' : 'POR_VENCER';
-    this.recordatoriosService.enviarManual(cliente.suscripcionId, tipo).subscribe({
-      next: () => this.snackBar.open(`Recordatorio enviado a ${cliente.email}`, 'Cerrar', { duration: 3000 }),
-      error: () => this.snackBar.open('No se pudo enviar el recordatorio', 'Cerrar', { duration: 3000 }),
-    });
-  }
-
-  eliminar(cliente: ClientePanel): void {
-    const confirmado = confirm(`¿Eliminar a ${cliente.nombre} ${cliente.apellido}? Esta acción lo desactiva del sistema.`);
-    if (!confirmado) return;
-
-    this.clientesService.eliminar(cliente.clienteId).subscribe({
-      next: () => {
-        this.snackBar.open('Cliente eliminado', 'Cerrar', { duration: 3000 });
-        this.cargar();
+      error: () => {
+        this.error.set(true);
+        this.cargando.set(false);
       },
-      error: () => this.snackBar.open('No se pudo eliminar el cliente', 'Cerrar', { duration: 3000 }),
+    });
+  }
+
+  buscar(evento: Event): void {
+    this.busqueda.set((evento.target as HTMLInputElement).value);
+  }
+
+  abrirFicha(cliente: ClientePanel): void {
+    const ref = this.sheet.open<FichaSocio, FichaSocioData>(FichaSocio, {
+      data: { cliente },
+      panelClass: 'ficha-sheet',
+      ariaLabel: `Ficha de ${cliente.nombre} ${cliente.apellido}`,
+    });
+    ref.afterDismissed().subscribe(() => {
+      if (ref.instance.huboCambios) this.cargar();
     });
   }
 
@@ -107,35 +110,6 @@ export class ClientesPanel implements OnInit {
     const ref = this.dialog.open(NuevoClienteDialog);
     ref.afterClosed().subscribe((creado) => {
       if (creado) this.cargar();
-    });
-  }
-
-  abrirAsignarPlan(cliente: ClientePanel): void {
-    const ref = this.dialog.open(AsignarPlanDialog, {
-      data: { clienteId: cliente.clienteId, nombreCliente: `${cliente.nombre} ${cliente.apellido}` },
-    });
-    ref.afterClosed().subscribe((asignado) => {
-      if (asignado) {
-        this.snackBar.open('Plan asignado', 'Cerrar', { duration: 3000 });
-        this.cargar();
-      }
-    });
-  }
-
-  abrirEditarDias(cliente: ClientePanel): void {
-    if (!cliente.suscripcionId) return;
-    const ref = this.dialog.open(EditarDiasDialog, {
-      data: {
-        suscripcionId: cliente.suscripcionId,
-        nombreCliente: `${cliente.nombre} ${cliente.apellido}`,
-        diasRestantesActual: cliente.diasRestantes ?? 0,
-      },
-    });
-    ref.afterClosed().subscribe((actualizado) => {
-      if (actualizado) {
-        this.snackBar.open('Vencimiento actualizado', 'Cerrar', { duration: 3000 });
-        this.cargar();
-      }
     });
   }
 }

@@ -9,11 +9,11 @@
 }
 
 .ayuda {
-  color: var(--text-muted);
+  color: var(--muted);
   font-size: 0.8rem;
 }
 
 .error {
-  color: var(--rojo);
+  color: var(--bad);
   font-size: 0.875rem;
 }

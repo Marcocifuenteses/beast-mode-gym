@@ -1,0 +1,44 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>Mi acceso</h1>
+      <p class="note">Muestra este código en la entrada. Sirve para entrar y para salir.</p>
+    </div>
+  </div>
+
+  @if (aviso(); as a) {
+    <p class="aviso" role="status">{{ a }}</p>
+  }
+
+  <section class="panel qr-panel">
+    <div class="qr-caja" [class.cargando]="!imagenQr()">
+      @if (imagenQr(); as src) {
+        <img [src]="src" alt="Código QR de acceso" width="320" height="320" />
+      } @else if (error()) {
+        <span class="material-icons" aria-hidden="true">qr_code_2</span>
+      } @else {
+        <span class="note">Generando…</span>
+      }
+    </div>
+
+    @if (error()) {
+      <p class="error" role="alert">{{ error() }}</p>
+      <button class="btn" type="button" (click)="pedirQr()">Reintentar</button>
+    } @else {
+      <div class="ciclo">
+        <div class="meter"><i [style.width.%]="progreso()"></i></div>
+        <span class="note">El código se renueva solo en <span class="num">{{ restante() }}</span> s</span>
+      </div>
+      <button class="btn ghost" type="button" (click)="pedirQr()">
+        <span class="material-icons" aria-hidden="true">refresh</span>
+        Generar uno nuevo ahora
+      </button>
+    }
+
+    @if (codigo(); as c) {
+      <p class="note centro">¿No funciona la cámara? Dicta tu código: <b class="num">{{ c }}</b></p>
+    }
+  </section>
+
+  <p class="note centro">Por seguridad el código cambia cada pocos segundos: una captura de pantalla no sirve para entrar.</p>
+</div>

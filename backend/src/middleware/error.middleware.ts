@@ -5,13 +5,23 @@ import { AppError } from '../lib/errors';
 
 // Los 3 índices únicos parciales de la DB (una suscripción ACTIVA por cliente,
 // una asistencia abierta por cliente, un recordatorio automático por tipo) no
-// están declarados en schema.prisma (Prisma no soporta índices parciales), así
-// que sus violaciones no llegan como el P2002 habitual: llegan como el error
-// crudo de Postgres (23505) envuelto en un PrismaClientUnknownRequestError.
+// están declarados en schema.prisma (Prisma no soporta índices parciales).
+// Según la versión de Prisma, su violación llega como P2002 (con el modelo en
+// meta.modelName) o como el error crudo de Postgres (23505) con el nombre del
+// índice en el mensaje; se cubren ambos casos.
 const MENSAJES_INDICE_PARCIAL: Record<string, string> = {
-  uq_suscripcion_activa_por_cliente: 'Este cliente ya tiene una suscripción activa',
+  uq_suscripcion_activa_por_cliente:
+    'Este cliente ya tiene una suscripción activa. Usa "Renovar" para extenderla.',
   uq_asistencia_abierta_por_cliente: 'Este cliente ya tiene una entrada sin registrar salida',
   uq_recordatorio_automatico: 'Ya se envió un recordatorio automático de este tipo para esta suscripción',
+};
+
+// Estos modelos no tienen otro índice único más que su id, así que un P2002
+// en ellos solo puede venir de su índice parcial.
+const INDICE_PARCIAL_POR_MODELO: Record<string, string> = {
+  Suscripcion: 'uq_suscripcion_activa_por_cliente',
+  Asistencia: 'uq_asistencia_abierta_por_cliente',
+  Recordatorio: 'uq_recordatorio_automatico',
 };
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -26,6 +36,10 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
 
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
     if (err.code === 'P2002') {
+      const indice = INDICE_PARCIAL_POR_MODELO[String(err.meta?.modelName)];
+      if (indice) {
+        return res.status(409).json({ error: MENSAJES_INDICE_PARCIAL[indice] });
+      }
       return res.status(409).json({ error: `Ya existe un registro con ese valor (${err.meta?.target})` });
     }
     if (err.code === 'P2025') {

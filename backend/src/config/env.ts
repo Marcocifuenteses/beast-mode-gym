@@ -11,6 +11,7 @@ const envSchema = z.object({
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
   RESEND_API_KEY: z.string().default(''),
   CORS_ORIGIN: z.string().default('http://localhost:4200'),
+  AFORO_CAPACIDAD: z.coerce.number().int().positive().default(60),
 });
 
 const parsed = envSchema.safeParse(process.env);

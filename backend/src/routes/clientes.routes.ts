@@ -5,6 +5,7 @@ import { prisma } from '../lib/prisma';
 import { authenticate, requireRole } from '../middleware/auth.middleware';
 import { AppError, NotFoundError } from '../lib/errors';
 import { parseBigIntParam } from '../lib/params';
+import { generarTokenQr, QR_VIGENCIA_SEGUNDOS } from '../services/checkin-qr.service';
 
 const router = Router();
 
@@ -16,24 +17,28 @@ router.get('/', requireRole('ADMIN', 'ENTRENADOR'), async (req, res) => {
   const estado = typeof req.query.estado === 'string' ? req.query.estado.toUpperCase() : undefined;
   const busqueda = typeof req.query.busqueda === 'string' ? req.query.busqueda.trim() : undefined;
 
-  const panel = await prisma.vPanelClientes.findMany({
-    where: {
-      ...(estado ? { semaforo: estado } : {}),
-      ...(busqueda
-        ? {
-            OR: [
-              { nombre: { contains: busqueda, mode: 'insensitive' } },
-              { apellido: { contains: busqueda, mode: 'insensitive' } },
-              { email: { contains: busqueda, mode: 'insensitive' } },
-              { codigo: { contains: busqueda, mode: 'insensitive' } },
-            ],
-          }
-        : {}),
-    },
-    orderBy: { diasRestantes: 'asc' },
-  });
+  const [panel, visitasAbiertas] = await Promise.all([
+    prisma.vPanelClientes.findMany({
+      where: {
+        ...(estado ? { semaforo: estado } : {}),
+        ...(busqueda
+          ? {
+              OR: [
+                { nombre: { contains: busqueda, mode: 'insensitive' } },
+                { apellido: { contains: busqueda, mode: 'insensitive' } },
+                { email: { contains: busqueda, mode: 'insensitive' } },
+                { codigo: { contains: busqueda, mode: 'insensitive' } },
+              ],
+            }
+          : {}),
+      },
+      orderBy: { diasRestantes: 'asc' },
+    }),
+    prisma.asistencia.findMany({ where: { salida: null }, select: { clienteId: true } }),
+  ]);
 
-  res.json(panel);
+  const dentro = new Set(visitasAbiertas.map((v) => v.clienteId));
+  res.json(panel.map((c) => ({ ...c, dentro: c.clienteId !== null && dentro.has(c.clienteId) })));
 });
 
 // --- Vista propia (SUSCRIPTOR) -------------------------------------------
@@ -54,6 +59,17 @@ router.get('/me/perfil', requireRole('SUSCRIPTOR'), async (req, res) => {
   ]);
 
   res.json({ perfil: panel, historialAsistencias });
+});
+
+// QR de acceso del socio: token firmado de vida corta que el entrenador escanea
+// en el check-in. Se pide uno nuevo antes de que caduque (ver checkin-qr.service).
+router.get('/me/qr', requireRole('SUSCRIPTOR'), async (req, res) => {
+  const cliente = await prisma.cliente.findUnique({ where: { usuarioId: req.user!.id } });
+  if (!cliente || !cliente.activo) throw new AppError(404, 'No tienes un perfil de cliente asociado');
+
+  const { token, expiraEn } = generarTokenQr(cliente.id);
+  res.set('Cache-Control', 'no-store');
+  res.json({ token, expiraEn, vigenciaSegundos: QR_VIGENCIA_SEGUNDOS, codigo: cliente.codigo });
 });
 
 // --- Detalle / alta / edición / baja (ADMIN, ENTRENADOR) ------------------
@@ -144,12 +160,15 @@ router.delete('/:id', requireRole('ADMIN'), async (req, res) => {
 async function obtenerClienteCompleto(clienteId: bigint) {
   const panel = await prisma.vPanelClientes.findFirst({ where: { clienteId } });
   if (!panel) return null;
-  const historialSuscripciones = await prisma.suscripcion.findMany({
-    where: { clienteId },
-    include: { plan: true },
-    orderBy: { fechaInicio: 'desc' },
-  });
-  return { ...panel, historialSuscripciones };
+  const [historialSuscripciones, visitaAbierta] = await Promise.all([
+    prisma.suscripcion.findMany({
+      where: { clienteId },
+      include: { plan: true },
+      orderBy: { fechaInicio: 'desc' },
+    }),
+    prisma.asistencia.findFirst({ where: { clienteId, salida: null }, select: { id: true } }),
+  ]);
+  return { ...panel, dentro: visitaAbierta !== null, historialSuscripciones };
 }
 
 async function generarCodigoCliente(): Promise<string> {

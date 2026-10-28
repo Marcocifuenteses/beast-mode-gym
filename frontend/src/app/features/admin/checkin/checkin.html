@@ -1,45 +1,60 @@
-<div class="wrap">
-  <mat-card class="tarjeta">
-    <mat-card-header>
-      <mat-card-title>Check-in</mat-card-title>
-      <mat-card-subtitle>Escanea o escribe el código del cliente</mat-card-subtitle>
-    </mat-card-header>
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>Check-in</h1>
+      <p class="note">Escanea el QR de la app del socio o escribe su código. El mismo código registra la entrada y la salida.</p>
+    </div>
+    <button class="btn" type="button" [class.ghost]="camara()" (click)="alternarCamara()">
+      <span class="material-icons" aria-hidden="true">{{ camara() ? 'videocam_off' : 'qr_code_scanner' }}</span>
+      {{ camara() ? 'Apagar cámara' : 'Escanear con cámara' }}
+    </button>
+  </div>
 
-    <form (ngSubmit)="escanear()">
-      <mat-card-content>
-        <mat-form-field appearance="outline" class="campo">
-          <mat-label>Código</mat-label>
-          <input
-            #campoCodigo
-            matInput
-            [(ngModel)]="codigo"
-            name="codigo"
-            autofocus
-            autocomplete="off"
-          />
-        </mat-form-field>
-      </mat-card-content>
+  @if (camara()) {
+    <section class="panel">
+      <app-qr-scanner (leido)="alLeerQr($event)" />
+      <p class="note centro">
+        {{ procesando() ? 'Registrando…' : 'Apunta la cámara al QR que el socio muestra en su app (pestaña Acceso).' }}
+      </p>
+    </section>
+  }
 
-      <mat-card-actions>
-        <button mat-flat-button color="primary" type="submit" [disabled]="procesando()">
-          <mat-icon>qr_code_scanner</mat-icon>
-          Registrar
-        </button>
-      </mat-card-actions>
-    </form>
-
+  <div aria-live="polite">
     @if (resultado(); as r) {
       <div class="resultado" [class.entrada]="r.accion === 'ENTRADA'" [class.salida]="r.accion === 'SALIDA'">
-        <mat-icon>{{ r.accion === 'ENTRADA' ? 'login' : 'logout' }}</mat-icon>
-        <span>{{ r.accion === 'ENTRADA' ? 'Entrada registrada' : 'Salida registrada' }}: {{ r.cliente.nombre }} {{ r.cliente.apellido }} ({{ r.cliente.codigo }})</span>
+        <span class="material-icons" aria-hidden="true">{{ r.accion === 'ENTRADA' ? 'login' : 'logout' }}</span>
+        <div>
+          <strong>{{ r.accion === 'ENTRADA' ? 'Entrada registrada' : 'Salida registrada' }}</strong>
+          <div>{{ r.cliente.nombre }} {{ r.cliente.apellido }} · <span class="num">{{ r.cliente.codigo }}</span></div>
+        </div>
       </div>
     }
 
     @if (error()) {
       <div class="resultado error">
-        <mat-icon>block</mat-icon>
-        <span>{{ error() }}</span>
+        <span class="material-icons" aria-hidden="true">block</span>
+        <div><strong>{{ error() }}</strong></div>
       </div>
     }
-  </mat-card>
+  </div>
+
+  <form class="panel" (ngSubmit)="escanear()">
+    <label class="campo" for="codigo">
+      <span class="label">{{ camara() ? 'O escribe el código' : 'Código de socio o lector QR' }}</span>
+      <input
+        #campoCodigo
+        id="codigo"
+        class="input codigo num"
+        [(ngModel)]="codigo"
+        name="codigo"
+        placeholder="CLI-0001"
+        [autofocus]="!camara()"
+        autocomplete="off"
+        autocapitalize="characters"
+      />
+    </label>
+    <button class="btn" [class.ghost]="camara()" type="submit" [disabled]="procesando() || !codigo.trim()">
+      Registrar
+    </button>
+  </form>
 </div>
