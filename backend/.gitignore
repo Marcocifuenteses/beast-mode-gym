@@ -1,3 +1,6 @@
 node_modules/
 .env
 dist/
+
+# Contraseñas en texto plano de las cuentas demo: no subir al repositorio
+prisma/demo/usuarios-demo.md

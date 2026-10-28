@@ -46,17 +46,28 @@ export async function procesarRecordatoriosPorVencer(): Promise<number> {
 
 /**
  * Envía "vencida" a las suscripciones VENCIDA que aún no tienen el aviso automático,
- * salvo que el cliente ya haya renovado (tiene otra suscripción ACTIVA).
+ * salvo que el cliente ya haya renovado (tiene otra suscripción ACTIVA). Solo se
+ * avisa por la suscripción más reciente de cada cliente: quien compró varias
+ * visitas de un día recibiría si no un correo por cada una.
  */
 export async function procesarRecordatoriosVencidas(): Promise<number> {
-  const candidatas = await prisma.suscripcion.findMany({
+  const encontradas = await prisma.suscripcion.findMany({
     where: {
       estado: 'VENCIDA',
       recordatorios: { none: { tipo: 'VENCIDA', enviadoPor: null } },
-      cliente: { suscripciones: { none: { estado: 'ACTIVA' } } },
+      cliente: { activo: true, suscripciones: { none: { estado: 'ACTIVA' } } },
     },
-    include: { cliente: { include: { usuario: true } }, plan: true },
+    include: {
+      cliente: {
+        include: {
+          usuario: true,
+          suscripciones: { where: { estado: { not: 'CANCELADA' } }, orderBy: { fechaFin: 'desc' }, take: 1, select: { id: true } },
+        },
+      },
+      plan: true,
+    },
   });
+  const candidatas = encontradas.filter((s) => s.cliente.suscripciones[0]?.id === s.id);
 
   for (const s of candidatas) {
     await enviarCorreoVencida(s.cliente.usuario.email, {
