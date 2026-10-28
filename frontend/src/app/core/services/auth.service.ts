@@ -36,8 +36,19 @@ export class AuthService {
     }
   }
 
-  /** Renueva el access token usando la cookie de refresh. Usado por el interceptor y al arrancar la app. */
-  async refrescarSesion(): Promise<boolean> {
+  private refrescoEnCurso: Promise<boolean> | null = null;
+
+  /**
+   * Renueva el access token usando la cookie de refresh. Usado por el interceptor y al arrancar la app.
+   * Si varias peticiones fallan a la vez (p. ej. el dashboard carga varias cosas), todas esperan la
+   * misma renovación en vez de lanzar una cada una con la misma cookie.
+   */
+  refrescarSesion(): Promise<boolean> {
+    this.refrescoEnCurso ??= this.pedirRefresco().finally(() => (this.refrescoEnCurso = null));
+    return this.refrescoEnCurso;
+  }
+
+  private async pedirRefresco(): Promise<boolean> {
     try {
       const respuesta = await firstValueFrom(
         this.http.post<{ accessToken: string }>(`${API_BASE_URL}/auth/refresh`, {}, { withCredentials: true }),

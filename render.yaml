@@ -31,5 +31,11 @@ services:
         generateValue: true
       - key: RESEND_API_KEY
         sync: false
+      # Sin dominio verificado en Resend, todos los correos van a esta dirección
+      # (la dueña de la cuenta de Resend). Se configura en el panel de Render.
+      - key: EMAIL_DESTINO_PRUEBAS
+        sync: false
+      - key: APP_URL
+        value: https://beast-mode-gym.onrender.com
       - key: AFORO_CAPACIDAD
         value: "60"

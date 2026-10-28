@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
+import { rateLimit } from 'express-rate-limit';
 import { prisma } from '../lib/prisma';
 import { isProduction } from '../config/env';
 import { issueTokenPair, revokeRefreshToken, rotateRefreshToken, RefreshTokenError } from '../services/auth.service';
@@ -17,11 +18,22 @@ const REFRESH_COOKIE_OPTIONS = {
 };
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().toLowerCase().email(),
   password: z.string().min(1),
 });
 
-router.post('/login', async (req, res) => {
+// Frena a quien prueba contraseñas: 10 intentos fallidos por IP cada 15 min.
+// Los logins correctos no cuentan, así que el uso normal no se ve afectado.
+const limiteLogin = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  skipSuccessfulRequests: true,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { error: 'Demasiados intentos fallidos. Espera unos minutos e inténtalo de nuevo.' },
+});
+
+router.post('/login', limiteLogin, async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: 'Datos inválidos', detalles: parsed.error.flatten().fieldErrors });

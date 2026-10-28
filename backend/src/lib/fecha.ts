@@ -23,6 +23,25 @@ export function horaGuatemala(fecha: Date): number {
   return Number(hora);
 }
 
+// Guatemala está en UTC-6 todo el año (no usa horario de verano desde 2006).
+const DESFASE_GUATEMALA_MS = 6 * 60 * 60 * 1000;
+
+/** Instante en que empieza (medianoche en Guatemala) el día `hoy + dias`. */
+export function inicioDiaGuatemala(dias = 0): Date {
+  return new Date(sumarDias(hoyGuatemala(), dias).getTime() + DESFASE_GUATEMALA_MS);
+}
+
+/** Instante en que empieza el mes en curso, en hora de Guatemala. */
+export function inicioMesGuatemala(): Date {
+  const hoy = hoyGuatemala();
+  return new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), 1) + DESFASE_GUATEMALA_MS);
+}
+
+/** Día calendario ("2026-10-27") de un instante, según la hora de Guatemala. */
+export function diaGuatemala(instante: Date): string {
+  return new Date(instante.getTime() - DESFASE_GUATEMALA_MS).toISOString().slice(0, 10);
+}
+
 export function sumarDias(fecha: Date, dias: number): Date {
   const copia = new Date(fecha);
   copia.setUTCDate(copia.getUTCDate() + dias);

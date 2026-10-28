@@ -1,11 +1,14 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
+import { randomInt } from 'crypto';
+import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { authenticate, requireRole } from '../middleware/auth.middleware';
 import { AppError, NotFoundError } from '../lib/errors';
 import { parseBigIntParam } from '../lib/params';
 import { generarTokenQr, QR_VIGENCIA_SEGUNDOS } from '../services/checkin-qr.service';
+import { enviarCorreoBienvenida } from '../services/email.service';
 
 const router = Router();
 
@@ -83,8 +86,9 @@ router.get('/:id', requireRole('ADMIN', 'ENTRENADOR'), async (req, res) => {
 const crearClienteSchema = z.object({
   nombre: z.string().min(1).max(60),
   apellido: z.string().min(1).max(60),
-  email: z.string().email(),
-  password: z.string().min(6).default('cambiar123'),
+  email: z.string().trim().toLowerCase().email(),
+  // Opcional: si no se da, se genera una temporal y se le envía al socio.
+  password: z.string().min(6).optional(),
   telefono: z.string().max(20).optional(),
   dpi: z.string().regex(/^\d{13}$/).optional(),
   fechaNacimiento: z.coerce.date().optional(),
@@ -92,28 +96,53 @@ const crearClienteSchema = z.object({
 
 router.post('/', requireRole('ADMIN', 'ENTRENADOR'), async (req, res) => {
   const data = crearClienteSchema.parse(req.body);
-  const codigo = await generarCodigoCliente();
+  const passwordTemporal = data.password ? null : generarPasswordTemporal();
+  const passwordHash = await bcrypt.hash(data.password ?? passwordTemporal!, 10);
 
-  const usuario = await prisma.usuario.create({
-    data: {
-      nombre: data.nombre,
-      apellido: data.apellido,
-      email: data.email,
-      passwordHash: bcrypt.hashSync(data.password, 10),
-      rol: 'SUSCRIPTOR',
-      cliente: {
-        create: {
-          codigo,
-          telefono: data.telefono,
-          dpi: data.dpi,
-          fechaNacimiento: data.fechaNacimiento,
+  // El código se calcula a partir del último; si dos altas simultáneas obtienen
+  // el mismo, el índice único lo rechaza y se reintenta con el siguiente.
+  let usuario;
+  for (let intento = 1; ; intento++) {
+    try {
+      usuario = await prisma.usuario.create({
+        data: {
+          nombre: data.nombre,
+          apellido: data.apellido,
+          email: data.email,
+          passwordHash,
+          rol: 'SUSCRIPTOR',
+          cliente: {
+            create: {
+              codigo: await generarCodigoCliente(),
+              telefono: data.telefono,
+              dpi: data.dpi,
+              fechaNacimiento: data.fechaNacimiento,
+            },
+          },
         },
-      },
-    },
-    include: { cliente: true },
-  });
+        include: { cliente: true },
+      });
+      break;
+    } catch (err) {
+      const chocoCodigo =
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002' &&
+        String(err.meta?.target).includes('codigo');
+      if (!chocoCodigo || intento >= 3) throw err;
+    }
+  }
 
-  res.status(201).json(await obtenerClienteCompleto(usuario.cliente!.id));
+  const cliente = await obtenerClienteCompleto(usuario.cliente!.id);
+  // La contraseña temporal se devuelve una sola vez, para que recepción se la dé al socio.
+  res.status(201).json({ ...cliente, passwordTemporal });
+
+  // El correo de bienvenida no debe poder tumbar un alta que ya fue exitosa.
+  enviarCorreoBienvenida(usuario.email, {
+    nombre: `${usuario.nombre} ${usuario.apellido}`,
+    email: usuario.email,
+    codigo: usuario.cliente!.codigo,
+    passwordTemporal: passwordTemporal ?? '(la que te indicaron en recepción)',
+  }).catch((err) => console.error('[clientes] no se pudo enviar el correo de bienvenida:', err));
 });
 
 const actualizarClienteSchema = z.object({
@@ -172,8 +201,21 @@ async function obtenerClienteCompleto(clienteId: bigint) {
 }
 
 async function generarCodigoCliente(): Promise<string> {
-  const total = await prisma.cliente.count();
-  return `CLI-${String(total + 1).padStart(4, '0')}`;
+  const ultimo = await prisma.cliente.findFirst({
+    where: { codigo: { startsWith: 'CLI-' } },
+    orderBy: { codigo: 'desc' },
+    select: { codigo: true },
+  });
+  const siguiente = (ultimo ? Number(ultimo.codigo.slice(4)) || 0 : 0) + 1;
+  return `CLI-${String(siguiente).padStart(4, '0')}`;
+}
+
+/** Contraseña temporal fácil de dictar: sin caracteres que se confunden (0/O, 1/l/I). */
+function generarPasswordTemporal(): string {
+  const letras = 'abcdefghjkmnpqrstuvwxyz';
+  const elegir = (alfabeto: string, n: number) =>
+    Array.from({ length: n }, () => alfabeto[randomInt(alfabeto.length)]).join('');
+  return `Gym-${elegir('23456789', 4)}-${elegir(letras, 3)}`;
 }
 
 export default router;

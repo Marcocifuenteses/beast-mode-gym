@@ -30,7 +30,7 @@ export class ClientesService {
   }
 
   crear(data: CrearClienteInput) {
-    return this.http.post<ClienteCompleto>(this.base, data);
+    return this.http.post<ClienteCompleto & { passwordTemporal: string | null }>(this.base, data);
   }
 
   actualizar(id: string, data: Partial<CrearClienteInput>) {

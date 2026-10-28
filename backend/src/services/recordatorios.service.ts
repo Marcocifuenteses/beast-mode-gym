@@ -16,32 +16,32 @@ export async function marcarSuscripcionesVencidas(): Promise<number> {
   return count;
 }
 
-/** Envía "por vencer" a las suscripciones que vencen en exactamente 5 días y aún no tienen el aviso automático. */
+/**
+ * Envía "por vencer" a las suscripciones que vencen en los próximos 5 días y aún
+ * no tienen el aviso automático. Es una ventana y no "exactamente en 5 días"
+ * porque en un hosting gratis el servidor puede estar dormido justo ese día.
+ */
 export async function procesarRecordatoriosPorVencer(): Promise<number> {
-  const objetivo = sumarDias(hoyGuatemala(), DIAS_AVISO_POR_VENCER);
+  const hoy = hoyGuatemala();
 
   const candidatas = await prisma.suscripcion.findMany({
     where: {
       estado: 'ACTIVA',
-      fechaFin: objetivo,
+      fechaFin: { gte: hoy, lte: sumarDias(hoy, DIAS_AVISO_POR_VENCER) },
       recordatorios: { none: { tipo: 'POR_VENCER', enviadoPor: null } },
+      cliente: { activo: true },
     },
     include: { cliente: { include: { usuario: true } }, plan: true },
   });
 
-  for (const s of candidatas) {
-    await enviarCorreoPorVencer(s.cliente.usuario.email, {
+  return enviarLote(candidatas, 'POR_VENCER', (s) =>
+    enviarCorreoPorVencer(s.cliente.usuario.email, {
       nombre: `${s.cliente.usuario.nombre} ${s.cliente.usuario.apellido}`,
       plan: s.plan.nombre,
-      diasRestantes: DIAS_AVISO_POR_VENCER,
-      monto: Number(s.precioPagado),
-    });
-    await prisma.recordatorio.create({
-      data: { clienteId: s.clienteId, suscripcionId: s.id, tipo: 'POR_VENCER' },
-    });
-  }
-
-  return candidatas.length;
+      diasRestantes: diasHasta(s.fechaFin),
+      monto: Number(s.plan.precio),
+    }),
+  );
 }
 
 /**
@@ -69,19 +69,41 @@ export async function procesarRecordatoriosVencidas(): Promise<number> {
   });
   const candidatas = encontradas.filter((s) => s.cliente.suscripciones[0]?.id === s.id);
 
-  for (const s of candidatas) {
-    await enviarCorreoVencida(s.cliente.usuario.email, {
+  return enviarLote(candidatas, 'VENCIDA', (s) =>
+    enviarCorreoVencida(s.cliente.usuario.email, {
       nombre: `${s.cliente.usuario.nombre} ${s.cliente.usuario.apellido}`,
       plan: s.plan.nombre,
       fechaVencimiento: s.fechaFin.toISOString().slice(0, 10),
-      monto: Number(s.precioPagado),
-    });
-    await prisma.recordatorio.create({
-      data: { clienteId: s.clienteId, suscripcionId: s.id, tipo: 'VENCIDA' },
-    });
-  }
+      monto: Number(s.plan.precio),
+    }),
+  );
+}
 
-  return candidatas.length;
+/**
+ * Envía un aviso automático por suscripción y lo registra. Si un correo falla
+ * (dirección inválida, límite de Resend...), se registra el error y se sigue
+ * con los demás; ese aviso queda pendiente para la próxima corrida.
+ */
+async function enviarLote<T extends { id: bigint; clienteId: bigint }>(
+  candidatas: T[],
+  tipo: TipoRecordatorio,
+  enviarCorreo: (s: T) => Promise<void>,
+): Promise<number> {
+  let enviados = 0;
+  for (const s of candidatas) {
+    try {
+      await enviarCorreo(s);
+      await prisma.recordatorio.create({ data: { clienteId: s.clienteId, suscripcionId: s.id, tipo } });
+      enviados++;
+    } catch (err) {
+      console.error(`[recordatorios] no se pudo enviar ${tipo} (suscripción ${s.id}):`, err instanceof Error ? err.message : err);
+    }
+  }
+  return enviados;
+}
+
+function diasHasta(fechaFin: Date): number {
+  return Math.round((fechaFin.getTime() - hoyGuatemala().getTime()) / (24 * 60 * 60 * 1000));
 }
 
 /** Corrida completa del día: marcar vencidas, luego enviar ambos tipos de aviso. */
@@ -106,19 +128,18 @@ export async function enviarRecordatorioManual(suscripcionId: bigint, tipo: Tipo
   const nombre = `${s.cliente.usuario.nombre} ${s.cliente.usuario.apellido}`;
 
   if (tipo === 'POR_VENCER') {
-    const diasRestantes = Math.ceil((s.fechaFin.getTime() - hoyGuatemala().getTime()) / (24 * 60 * 60 * 1000));
     await enviarCorreoPorVencer(s.cliente.usuario.email, {
       nombre,
       plan: s.plan.nombre,
-      diasRestantes,
-      monto: Number(s.precioPagado),
+      diasRestantes: diasHasta(s.fechaFin),
+      monto: Number(s.plan.precio),
     });
   } else {
     await enviarCorreoVencida(s.cliente.usuario.email, {
       nombre,
       plan: s.plan.nombre,
       fechaVencimiento: s.fechaFin.toISOString().slice(0, 10),
-      monto: Number(s.precioPagado),
+      monto: Number(s.plan.precio),
     });
   }
 

@@ -60,7 +60,18 @@ export async function issueTokenPair(
 
 export class RefreshTokenError extends Error {}
 
+/**
+ * Margen para usar de nuevo un refresh token recién rotado. Dos pestañas (o dos
+ * peticiones) que renuevan la sesión a la vez mandan la misma cookie: sin este
+ * margen la segunda parecería un robo y se cerrarían todas las sesiones.
+ */
+const MARGEN_REUSO_MS = 30_000;
 
+/**
+ * Verifica y rota un refresh token. Si el token ya había sido rotado hace más
+ * del margen de reuso, se interpreta como robo: se revocan todos los tokens del
+ * usuario y se rechaza la solicitud.
+ */
 export async function rotateRefreshToken(rawRefreshToken: string, createdByIp?: string): Promise<TokenPair> {
   let payload: RefreshTokenPayload;
   try {
@@ -76,12 +87,19 @@ export async function rotateRefreshToken(rawRefreshToken: string, createdByIp?: 
   }
 
   if (stored.revokedAt) {
-    // Reuso de un token ya rotado: posible robo, se revoca todo.
-    await prisma.refreshToken.updateMany({
-      where: { usuarioId: stored.usuarioId, revokedAt: null },
-      data: { revokedAt: new Date() },
-    });
-    throw new RefreshTokenError('Refresh token reutilizado, sesión revocada por seguridad');
+    // Revocado sin reemplazo = cerró sesión: ese token ya no sirve, sin más.
+    if (!stored.replacedByTokenId) {
+      throw new RefreshTokenError('Refresh token inválido o expirado');
+    }
+    // Rotado hace un instante: renovación simultánea legítima, se emite otro par.
+    // Rotado hace más tiempo: alguien guardó un token viejo, posible robo.
+    if (Date.now() - stored.revokedAt.getTime() > MARGEN_REUSO_MS) {
+      await prisma.refreshToken.updateMany({
+        where: { usuarioId: stored.usuarioId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      throw new RefreshTokenError('Refresh token reutilizado, sesión revocada por seguridad');
+    }
   }
 
   const usuario = await prisma.usuario.findUnique({ where: { id: stored.usuarioId } });
@@ -91,8 +109,10 @@ export async function rotateRefreshToken(rawRefreshToken: string, createdByIp?: 
 
   const nuevoPar = await issueTokenPair(usuario.id, usuario.rol, createdByIp);
 
-  await prisma.refreshToken.update({
-    where: { id: stored.id },
+  // Solo se marca la rotación si nadie la marcó antes (condición en el WHERE,
+  // atómica): en una renovación simultánea, la primera queda como la oficial.
+  await prisma.refreshToken.updateMany({
+    where: { id: stored.id, revokedAt: null },
     data: { revokedAt: new Date(), replacedByTokenId: extractJti(nuevoPar.refreshToken) },
   });
 

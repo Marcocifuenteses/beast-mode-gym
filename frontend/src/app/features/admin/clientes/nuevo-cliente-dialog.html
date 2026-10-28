@@ -1,36 +1,61 @@
-<h2 mat-dialog-title>Nuevo cliente</h2>
-
-<form (ngSubmit)="guardar()" #f="ngForm">
+@if (creado(); as c) {
+  <h2 mat-dialog-title>Socio registrado</h2>
   <mat-dialog-content class="campos">
-    <mat-form-field appearance="outline" class="campo">
-      <mat-label>Nombre</mat-label>
-      <input matInput name="nombre" [(ngModel)]="nombre" required />
-    </mat-form-field>
-
-    <mat-form-field appearance="outline" class="campo">
-      <mat-label>Apellido</mat-label>
-      <input matInput name="apellido" [(ngModel)]="apellido" required />
-    </mat-form-field>
-
-    <mat-form-field appearance="outline" class="campo">
-      <mat-label>Correo</mat-label>
-      <input matInput type="email" name="email" [(ngModel)]="email" required />
-    </mat-form-field>
-
-    <mat-form-field appearance="outline" class="campo">
-      <mat-label>Teléfono</mat-label>
-      <input matInput name="telefono" [(ngModel)]="telefono" />
-    </mat-form-field>
-
-    <p class="ayuda">La contraseña inicial será <code>cambiar123</code>.</p>
-
-    @if (error()) {
-      <p class="error">{{ error() }}</p>
+    <p><strong>{{ c.nombre }}</strong> ya tiene su cuenta (código <strong>{{ c.codigo }}</strong>).</p>
+    @if (c.passwordTemporal) {
+      <div class="credencial">
+        <span class="ayuda">Contraseña temporal — dásela al socio:</span>
+        <code>{{ c.passwordTemporal }}</code>
+      </div>
+      <p class="ayuda">También se la enviamos por correo a {{ c.email }}. No se volverá a mostrar.</p>
+    } @else {
+      <p class="ayuda">Puede entrar con su correo {{ c.email }} y la contraseña que escribiste.</p>
     }
   </mat-dialog-content>
-
   <mat-dialog-actions align="end">
-    <button mat-button type="button" mat-dialog-close>Cancelar</button>
-    <button mat-flat-button color="primary" type="submit" [disabled]="f.invalid || guardando()">Crear</button>
+    <button mat-flat-button color="primary" type="button" (click)="terminar()">Listo</button>
   </mat-dialog-actions>
-</form>
+} @else {
+  <h2 mat-dialog-title>Nuevo socio</h2>
+
+  <form (ngSubmit)="guardar()" #f="ngForm">
+    <mat-dialog-content class="campos">
+      <mat-form-field appearance="outline" class="campo">
+        <mat-label>Nombre</mat-label>
+        <input matInput name="nombre" [(ngModel)]="nombre" required />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="campo">
+        <mat-label>Apellido</mat-label>
+        <input matInput name="apellido" [(ngModel)]="apellido" required />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="campo">
+        <mat-label>Correo</mat-label>
+        <input matInput type="email" name="email" [(ngModel)]="email" required email autocapitalize="off" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="campo">
+        <mat-label>Teléfono</mat-label>
+        <input matInput name="telefono" [(ngModel)]="telefono" inputmode="tel" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="campo">
+        <mat-label>Contraseña (opcional)</mat-label>
+        <input matInput type="text" name="password" [(ngModel)]="password" minlength="6" autocomplete="off" />
+        <mat-hint>Si la dejas vacía se genera una temporal y se le envía por correo.</mat-hint>
+      </mat-form-field>
+
+      @if (error()) {
+        <p class="error">{{ error() }}</p>
+      }
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="end">
+      <button mat-button type="button" mat-dialog-close>Cancelar</button>
+      <button mat-flat-button color="primary" type="submit" [disabled]="f.invalid || guardando()">
+        {{ guardando() ? 'Creando…' : 'Crear' }}
+      </button>
+    </mat-dialog-actions>
+  </form>
+}

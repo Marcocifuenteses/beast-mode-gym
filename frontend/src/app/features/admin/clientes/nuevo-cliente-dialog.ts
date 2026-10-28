@@ -19,8 +19,11 @@ export class NuevoClienteDialog {
   apellido = '';
   email = '';
   telefono = '';
+  password = '';
   guardando = signal(false);
   error = signal<string | null>(null);
+  /** Datos del socio recién creado, para mostrar su contraseña temporal una sola vez. */
+  creado = signal<{ nombre: string; email: string; codigo: string; passwordTemporal: string | null } | null>(null);
 
   constructor(
     private readonly clientesService: ClientesService,
@@ -31,16 +34,26 @@ export class NuevoClienteDialog {
     this.error.set(null);
     this.guardando.set(true);
     this.clientesService
-      .crear({ nombre: this.nombre, apellido: this.apellido, email: this.email, telefono: this.telefono || undefined })
+      .crear({
+        nombre: this.nombre,
+        apellido: this.apellido,
+        email: this.email,
+        telefono: this.telefono || undefined,
+        password: this.password || undefined,
+      })
       .subscribe({
-        next: () => {
+        next: (c) => {
           this.guardando.set(false);
-          this.ref.close(true);
+          this.creado.set({ nombre: `${c.nombre} ${c.apellido}`, email: c.email, codigo: c.codigo, passwordTemporal: c.passwordTemporal });
         },
         error: (err: HttpErrorResponse) => {
           this.guardando.set(false);
           this.error.set(err.error?.error ?? 'No se pudo crear el cliente');
         },
       });
+  }
+
+  terminar(): void {
+    this.ref.close(true);
   }
 }

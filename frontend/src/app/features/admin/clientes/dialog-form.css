@@ -17,3 +17,20 @@
   color: var(--bad);
   font-size: 0.875rem;
 }
+
+.credencial {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  margin-bottom: 8px;
+}
+
+.credencial code {
+  font-family: var(--mono);
+  font-size: 20px;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  user-select: all;
+}
